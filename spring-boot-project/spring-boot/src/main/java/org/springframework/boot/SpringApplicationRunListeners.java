@@ -50,6 +50,7 @@ class SpringApplicationRunListeners {
 	}
 
 	void starting(ConfigurableBootstrapContext bootstrapContext, Class<?> mainApplicationClass) {
+		// 启动所有监听器，顺序启动所有监听器
 		doWithListeners("spring.boot.application.starting", (listener) -> listener.starting(bootstrapContext),
 				(step) -> {
 					if (mainApplicationClass != null) {

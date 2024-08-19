@@ -329,17 +329,28 @@ public class SpringApplication {
 		stopWatch.start();
 		DefaultBootstrapContext bootstrapContext = createBootstrapContext();
 		ConfigurableApplicationContext context = null;
+		// 设置 java headless 属性
 		configureHeadlessProperty();
+		// 获取 RunListener 执行监听器并启动
+		// 只有 org.springframework.boot.context.event.EventPublishingRunListener 一个 RunListener
 		SpringApplicationRunListeners listeners = getRunListeners(args);
 		listeners.starting(bootstrapContext, this.mainApplicationClass);
 		try {
+			// 封装 args 到 ApplicationArguments 对象
 			ApplicationArguments applicationArguments = new DefaultApplicationArguments(args);
+			// 创建并配置运行环境
 			ConfigurableEnvironment environment = prepareEnvironment(listeners, bootstrapContext, applicationArguments);
+			// 配置不实例化的类
 			configureIgnoreBeanInfo(environment);
+			// 打印 banner
 			Banner printedBanner = printBanner(environment);
+			// 根据 webApplicationType 类型创建应用程序上下文
 			context = createApplicationContext();
+			// 设置上下文应用程序启动器
 			context.setApplicationStartup(this.applicationStartup);
+			// 预处理上下文
 			prepareContext(bootstrapContext, context, environment, listeners, applicationArguments, printedBanner);
+			// 刷新上下文
 			refreshContext(context);
 			afterRefresh(context, applicationArguments);
 			stopWatch.stop();
@@ -373,6 +384,7 @@ public class SpringApplication {
 	private ConfigurableEnvironment prepareEnvironment(SpringApplicationRunListeners listeners,
 			DefaultBootstrapContext bootstrapContext, ApplicationArguments applicationArguments) {
 		// Create and configure the environment
+		// 创建运行环境
 		ConfigurableEnvironment environment = getOrCreateEnvironment();
 		configureEnvironment(environment, applicationArguments.getSourceArgs());
 		ConfigurationPropertySources.attach(environment);
@@ -402,6 +414,10 @@ public class SpringApplication {
 				deduceEnvironmentClass());
 	}
 
+	/**
+	 * 预判环境类型
+	 * @return
+	 */
 	private Class<? extends StandardEnvironment> deduceEnvironmentClass() {
 		switch (this.webApplicationType) {
 		case SERVLET:
@@ -416,16 +432,22 @@ public class SpringApplication {
 	private void prepareContext(DefaultBootstrapContext bootstrapContext, ConfigurableApplicationContext context,
 			ConfigurableEnvironment environment, SpringApplicationRunListeners listeners,
 			ApplicationArguments applicationArguments, Banner printedBanner) {
+		// 将执行环境设置到上下文中
 		context.setEnvironment(environment);
+		//
 		postProcessApplicationContext(context);
+		// 应用初始化器
 		applyInitializers(context);
+		// 发送 ApplicationContextInitializedEvent 上下文初始化结束事件
 		listeners.contextPrepared(context);
+		// 发送关闭事件
 		bootstrapContext.close(context);
 		if (this.logStartupInfo) {
 			logStartupInfo(context.getParent() == null);
 			logStartupProfileInfo(context);
 		}
 		// Add boot specific singleton beans
+		// 添加启动相关对象到 bean单例工厂 中
 		ConfigurableListableBeanFactory beanFactory = context.getBeanFactory();
 		beanFactory.registerSingleton("springApplicationArguments", applicationArguments);
 		if (printedBanner != null) {
@@ -435,6 +457,7 @@ public class SpringApplication {
 			((DefaultListableBeanFactory) beanFactory)
 					.setAllowBeanDefinitionOverriding(this.allowBeanDefinitionOverriding);
 		}
+		// 添加 LazyInitializationBeanFactoryPostProcessor 懒加载BeanFactory后置处理器
 		if (this.lazyInitialization) {
 			context.addBeanFactoryPostProcessor(new LazyInitializationBeanFactoryPostProcessor());
 		}
@@ -443,9 +466,14 @@ public class SpringApplication {
 		Set<Object> sources = getAllSources();
 		Assert.notEmpty(sources, "Sources must not be empty");
 		load(context, sources.toArray(new Object[0]));
+		// 上下文加载结束
 		listeners.contextLoaded(context);
 	}
 
+	/**
+	 * 刷新上下文，重点方法
+	 * @param context
+	 */
 	private void refreshContext(ConfigurableApplicationContext context) {
 		if (this.registerShutdownHook) {
 			shutdownHook.registerApplicationContext(context);
@@ -497,6 +525,10 @@ public class SpringApplication {
 		return instances;
 	}
 
+	/**
+	 * 通过类判断服务环境
+	 * @return
+	 */
 	private ConfigurableEnvironment getOrCreateEnvironment() {
 		if (this.environment != null) {
 			return this.environment;
@@ -523,10 +555,13 @@ public class SpringApplication {
 	 * @see #configurePropertySources(ConfigurableEnvironment, String[])
 	 */
 	protected void configureEnvironment(ConfigurableEnvironment environment, String[] args) {
+		// 添加 conversionService
 		if (this.addConversionService) {
 			environment.setConversionService(new ApplicationConversionService());
 		}
+		// 配置环境属性
 		configurePropertySources(environment, args);
+		// 配置环境配置（空实现）
 		configureProfiles(environment, args);
 	}
 
@@ -650,6 +685,7 @@ public class SpringApplication {
 			Class<?> requiredType = GenericTypeResolver.resolveTypeArgument(initializer.getClass(),
 					ApplicationContextInitializer.class);
 			Assert.isInstanceOf(requiredType, context, "Unable to call initializer.");
+			// 执行初始化器进行初始化操作
 			initializer.initialize(context);
 		}
 	}
@@ -1286,6 +1322,9 @@ public class SpringApplication {
 	/**
 	 * Returns read-only ordered Set of the {@link ApplicationContextInitializer}s that
 	 * will be applied to the Spring {@link ApplicationContext}.
+	 *
+	 * 返回 ApplicationContextInitializer 初始化器列表
+	 *
 	 * @return the initializers
 	 */
 	public Set<ApplicationContextInitializer<?>> getInitializers() {
